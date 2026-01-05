@@ -87,7 +87,7 @@ class MSGC(nn.Module):
 
 
 <div align="center">
-    <img src="Fig. 3-The structure of C2f-MSGC module.png" width="600">
+    <img src="Fig. 3-The structure of C2f-MSGC module.png" width="500">
 </div>
 
 <div align="center">​ 
@@ -211,7 +211,7 @@ class MSDHA(nn.Module):
 ## 3. LMSADet head
 
 <div align="center">
-    <img src="Fig. 5-The structure of LMSADet head.png" width="600">
+    <img src="Fig. 5-The structure of LMSADet head.png" width="700">
 </div>
 
 <div align="center">​ 
