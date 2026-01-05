@@ -8,3 +8,13 @@ This is the official code implementation of MS-RDDNet for the *Neurocomputing* j
 <div align="center">​ 
 Network structure of MS-RDDNet
 </div>	
+
+## 1. MSGC module
+
+<div align="center">
+    <img src="Fig. 2-The structure of MSGC module.png" width="600">
+</div>
+
+<div align="center">​ 
+The structure of MSGC module
+</div>	
