@@ -18,3 +18,15 @@ Network structure of MS-RDDNet
 <div align="center">​ 
 The structure of MSGC module
 </div>	
+
+
+
+<div align="center">
+    <img src="Fig. 3-The structure of C2f-MSGC module.png" width="600">
+</div>
+
+<div align="center">​ 
+The structure of C2f-MSGC module
+</div>	
+
+
