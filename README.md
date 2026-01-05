@@ -218,3 +218,104 @@ class MSDHA(nn.Module):
 The structure of LMSADet head
 </div>
 
+```python
+class MultiScaleAttnConv(nn.Module):
+    def __init__(self, in_channels):
+        super().__init__()
+        self.dws = nn.ModuleList([
+            nn.Sequential(
+                nn.Conv2d(in_channels, in_channels, kernel_size=k, padding=k//2, groups=in_channels),
+                nn.Conv2d(in_channels, in_channels, 1)
+            )
+            for k in [3, 5, 7]
+        ])
+        self.fusion = nn.Conv2d(in_channels*3, in_channels, 1)
+        # attention weight generator
+        self.attn = nn.Conv2d(in_channels, 3, 1)  
+
+    def forward(self, x):
+        feats = [dw(x) for dw in self.dws]
+        fused = torch.cat(feats, dim=1)
+        fused = self.fusion(fused)
+        
+        # Softmax-normalized attention weights
+        attn_weights = F.softmax(self.attn(x), dim=1)
+        # weighted fusion
+        out = torch.sum(attn_weights.unsqueeze(2) * fused.unsqueeze(1), dim=1)
+        return out  
+
+
+class Detect(nn.Module):
+    dynamic = False  
+    export = False 
+    format = None  
+    end2end = False  
+    max_det = 300  
+    shape = None
+    anchors = torch.empty(0)  
+    strides = torch.empty(0)  
+    legacy = False  
+
+    def __init__(self, nc=80, ch=()):
+        super().__init__()
+        self.nc = nc  
+        self.nl = len(ch)  
+        self.reg_max = 16  
+        
+        self.no = nc + self.reg_max * 4  
+        # strides computed during build
+        self.stride = torch.zeros(self.nl)  
+        c2, c3 = max((16, ch[0]//4, self.reg_max*4)), max(ch[0], min(self.nc, 100))  
+        
+        # bounding box prediction branch
+        self.cv2 = nn.ModuleList(
+            nn.Sequential(
+                MultiScaleAttnConv(x),  # multi-scale attention convolution
+                DWConv(x, c2, 3), 
+                DWConv(c2, c2, 3), 
+                nn.Conv2d(c2, 4*self.reg_max, 1)
+            ) for x in ch
+        )
+        
+        # class prediction branch
+        self.cv3 = (nn.ModuleList(
+            nn.Sequential(
+                MultiScaleAttnConv(x),  # multi-scale attention convolution
+                DWConv(x, c3, 3), 
+                DWConv(c3, c3, 3), 
+                nn.Conv2d(c3, self.nc, 1)
+            ) for x in ch)
+                    
+            if self.legacy
+            else nn.ModuleList(
+                nn.Sequential(
+                    MultiScaleAttnConv(x),  # 引入多尺度注意力卷积
+                    nn.Sequential(DWConv(x, x, 3), Conv(x, c3, 1)),
+                    nn.Sequential(DWConv(c3, c3, 3), Conv(c3, c3, 1)),
+                    nn.Conv2d(c3, self.nc, 1),
+                )
+                for x in ch
+            )
+        )
+
+        self.dfl = DFL(self.reg_max) if self.reg_max > 1 else nn.Identity()
+
+        if self.end2end:
+            self.one2one_cv2 = copy.deepcopy(self.cv2)
+            self.one2one_cv3 = copy.deepcopy(self.cv3)
+
+    def forward(self, x):
+        if self.end2end:
+            return self.forward_end2end(x)
+        
+        for i in range(self.nl):
+            # (bs, 4*self.reg_max+nc, 80, 80)
+            # (bs, 4*self.reg_max+nc, 40, 40)
+            # (bs, 4*self.reg_max+nc, 20, 20)
+            x[i] = torch.cat((self.cv2[i](x[i]), self.cv3[i](x[i])), 1)
+        
+        if self.training: 
+            return x
+        y = self._inference(x)
+        return y if self.export else (y, x)
+```
