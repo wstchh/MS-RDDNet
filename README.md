@@ -36,7 +36,7 @@ The structure of C2f-MSGC module
 ## 2. MSDHA mechanism
 
 <div align="center">
-    <img src="Fig. 4-The structure of MSDHA mechanism.png" width="600">
+    <img src="Fig. 4-The structure of MSDHA  mechanism.png" width="600">
 </div>
 
 <div align="center">​ 
