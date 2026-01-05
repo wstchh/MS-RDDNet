@@ -42,3 +42,16 @@ The structure of C2f-MSGC module
 <div align="center">​ 
 The structure of MSDHA mechanism
 </div>
+
+
+
+## 3. LMSADet head
+
+<div align="center">
+    <img src="Fig. 5-The structure of LMSADet head.png" width="600">
+</div>
+
+<div align="center">​ 
+The structure of LMSADet head
+</div>
+
