@@ -9,6 +9,18 @@ This is the official code implementation of MS-RDDNet for the *Neurocomputing* j
 Network structure of MS-RDDNet
 </div>	
 
+## Datasets
+```python
+Yan H, Zhang J. UAV-PDD2023: A benchmark dataset for pavement distress detection based on UAV images[J]. Data in Brief, 2023, 51: 109692.
+
+He J, Gong L, Xu C, et al. HighRPD: A high-altitude drone dataset of road pavement distress[J]. Data in Brief, 2025, 59: 111377.
+
+
+
+```
+
+
+
 ## 1. MSGC module
 
 <div align="center">
