@@ -127,7 +127,86 @@ class C2f_MSGC(nn.Module):
 The structure of MSDHA mechanism
 </div>
 
+```python
+class CSAttention(nn.Module):
+    def __init__(self, channel, reduction=4):
+        super(CSAttention, self).__init__()
+        # Channel Attention
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+        self.max_pool = nn.AdaptiveMaxPool2d(1)
+        self.channel_conv = nn.Sequential(
+            nn.Conv2d(channel, channel // reduction, kernel_size=1, bias=False),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(channel // reduction, channel, kernel_size=1, bias=False),
+            nn.Sigmoid()
+        )
+        # Spatial Attention
+        self.spatial_conv = nn.Sequential(
+            nn.Conv2d(2, 1, kernel_size=7, stride=1, padding=3, bias=False),
+            nn.Sigmoid()
+        )
 
+    def forward(self, x):
+        b, c, h, w = x.size()
+
+        # Channel attention
+        y_channel = self.avg_pool(x) + self.max_pool(x)
+        y_channel = self.channel_conv(y_channel)
+
+        # Spatial attention
+        avg_out = torch.mean(x, dim=1, keepdim=True)
+        max_out, _ = torch.max(x, dim=1, keepdim=True)
+        y_spatial = torch.cat([avg_out, max_out], dim=1)
+        y_spatial = self.spatial_conv(y_spatial)
+
+        y = y_channel * y_spatial
+        return x * y.expand_as(x)
+
+
+class MSDHA(nn.Module):
+    def __init__(self, c1, factor=4, reduction=16):
+        super(MSDHA, self).__init__()
+        c_ = int(c1 // factor)
+        
+        # 1x1 convolution for channel compression
+        self.conv1 = nn.Conv2d(c1, c_, kernel_size=1, stride=1, padding=0)
+
+        # 3×3 convolution with dilation=2, receptive field 5×5
+        self.conv3x3_d2 = nn.Sequential(
+                            nn.Conv2d(c_, c_, kernel_size=3, stride=1, padding=2, dilation=2, groups=c_, bias=False),
+                            nn.ReLU(inplace=True)
+                        )
+                                    
+        # 3×3 convolution with dilation=4, receptive field 9×9
+        self.conv3x3_d4 = nn.Sequential(
+                            nn.Conv2d(c_, c_, kernel_size=3, stride=1, padding=4, dilation=4, groups=c_, bias=False),
+                            nn.ReLU(inplace=True)
+                        )
+
+        # 3×3 convolution with dilation=6, receptive field 13×13
+        self.conv3x3_d6 = nn.Sequential(
+                            nn.Conv2d(c_, c_, kernel_size=3, stride=1, padding=6, dilation=6, groups=c_, bias=False),
+                            nn.ReLU(inplace=True)
+                        )
+
+        # 1×1 convolution for channel adjustment
+        self.conv2 = nn.Conv2d(c_*4, c_*4, kernel_size=1, stride=1, padding=0)
+
+        self.csa = CSAttention(c_*4, reduction)
+       
+
+    def forward(self, x):
+        x = self.conv1(x)
+        x2 = self.conv3x3_d2(x)
+        x4 = self.conv3x3_d4(x)
+        x6 = self.conv3x3_d6(x)
+        x_concat = torch.cat([x, x2, x4, x6], dim=1)
+        out = self.conv2(x_concat)
+
+        # residual attention enhancement
+        out = self.csa(out)
+        return out
+```
 
 ## 3. LMSADet head
 
